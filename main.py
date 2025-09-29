@@ -1,29 +1,32 @@
 import speech_recognition as sr
-import pyttsx3
 import datetime
 import webbrowser
 import os
 import sys
 import requests
 import google.generativeai as genai
+from gtts import gTTS
+from playsound import playsound
 
 # ---------------- API KEYS ---------------- #
-GOOGLE_API_KEY = "AIzaSyD4heBYuiOUcxmuxWEc7WftGySglpJiLwU"        # Replace with your Google API Key
-SEARCH_ENGINE_ID = "427103038d60f4518"    # Replace with your CSE ID
+GOOGLE_API_KEY = "AIzaSyD4heBYuiOUcxmuxWEc7WftGySglpJiLwU"            # Replace with your Google API Key
+SEARCH_ENGINE_ID = "427103038d60f4518"                                # Replace with your CSE ID
 genai.configure(api_key="AIzaSyBsi0V8wJQrvvtQNbpwWMyA0H9m4vcD-cY")    # Replace with your Gemini API key
 gemini = genai.GenerativeModel("gemini-2.0-flash")
 
-# ---------------- TTS Setup ---------------- #
-engine = pyttsx3.init()
-engine.setProperty('rate', 170)
-engine.setProperty('voice', engine.getProperty('voices')[0].id)
-
-# ---------------- Functions ---------------- #
+# ---------------- TTS Setup (gTTS) ---------------- #
 def speak(text):
     print("Jarvis:", text)
-    engine.say(text)
-    engine.runAndWait()
+    try:
+        tts = gTTS(text=text, lang='en', slow=False)
+        filename = "temp.mp3"
+        tts.save(filename)
+        playsound(filename)
+        os.remove(filename)
+    except Exception as e:
+        print("TTS error:", e)
 
+# ---------------- Listen Function ---------------- #
 def listen():
     r = sr.Recognizer()
     with sr.Microphone() as source:
@@ -42,6 +45,7 @@ def listen():
             speak("I can't connect to the internet.")
             return None
 
+# ---------------- Google Search ---------------- #
 def google_search(query):
     """Fetch live answer from Google Custom Search"""
     try:
@@ -51,6 +55,7 @@ def google_search(query):
     except:
         return None
 
+# ---------------- Gemini Fallback ---------------- #
 def chat_with_gemini(query):
     """Fallback to Gemini AI"""
     try:
@@ -59,6 +64,7 @@ def chat_with_gemini(query):
     except:
         return "Sorry, I couldn't get an answer right now."
 
+# ---------------- Respond Function ---------------- #
 def respond(command):
     if command is None:
         return
@@ -84,7 +90,7 @@ def respond(command):
         speak("Opening Google")
 
     elif "play music" in command:
-        music_dir = "D:\\IDM\\Music"
+        music_dir = "D:\\IDM\\Music"  # Change to your music folder
         if os.path.exists(music_dir):
             songs = os.listdir(music_dir)
             if songs:
@@ -96,7 +102,7 @@ def respond(command):
             speak("Music folder not found.")
 
     else:
-        # Try Google first
+        # Try Google first for live info
         answer = google_search(command)
         if answer:
             speak(answer)
@@ -111,5 +117,5 @@ if __name__ == "__main__":
     while True:
         command = listen()
         if command:
-            command = command.replace("jarvis", "").strip()
+            command = command.lower().strip()
             respond(command)
